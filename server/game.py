@@ -1,25 +1,24 @@
 from .player import Player
 from .board import Board
 from .round import Round
+import random
+
 
 class Game(object):
 
-    def __init__(self, id, players, thread):
+    def __init__(self, id, players):
         """
         init the game! once player threshold is met
         :param id: int
         :param players: Player[]
-        :param thread:
         """
         self.id = id
         self.players = players
-        self.words_used = []
+        self.words_used = set()
         self.round = None
         self.board = Board()
         self.player_draw_ind = 0
-        self.connected_thread = thread
         self.start_new_round()
-
 
     def start_new_round(self):
         """
@@ -32,8 +31,6 @@ class Game(object):
         if self.player_draw_ind >= len(self.players):
             self.end_round()
             self.end_game()
-
-
 
     def player_guess(self, player, guess):
         """
@@ -50,7 +47,17 @@ class Game(object):
         :param player: Player
         :raise Exception()
         """
-        pass
+        if player in self.players:
+            player_idx = self.players.index(player)
+            if player_idx <= self.player_draw_ind:
+                self.player_draw_ind -= 1
+            self.players.remove(player)
+            self.round.player_left(player)
+        else:
+            raise Exception("Player not in game")
+
+        if len(self.players) <= 2:
+            self.end_game()
 
     def skip(self):
         """
@@ -91,11 +98,22 @@ class Game(object):
         ends the game
         :return:
         """
-        pass
+        for player in self.players:
+            self.round.player_left(player)
 
     def get_word(self):
         """
-        gives a word that has not yer used
+        gives a word that has not yet been used
         :return: str
         """
-        pass
+        with open("words.txt", "r") as f:
+            words = []
+            for line in f:
+                word = line.strip()
+                if word not in self.words_used:
+                    words.append(word)
+
+            r = random.randint(0, len(words)-1)
+            w = words[r].strip()
+            self.words_used.add(w)
+            return w

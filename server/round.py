@@ -8,15 +8,17 @@ class Round(object):
     def __init__(self, word, player_drawing, players, game):
         """
         init object
+        :param game: Game
         :param word: str
         :param player_drawing: Player
         :param players: Player[]
         """
+        self.game = game
         self.word = word
         self.player_drawing = player_drawing
+        self.player_scores = {player: 0 for player in players}
         self.player_guessed = []
         self.skips = 0
-        self.player_scores = {player: 0 for player in players}
         self.time = 60
         self.chat = Chat(self)
         start_new_thread(self.time_thread, ())
@@ -53,11 +55,9 @@ class Round(object):
         Run in thread to keep track of time
         :return: None
         """
-        while self.time > 0:
-            t.sleep(1)
-            self.time -= 1
-        self.end_round("Time is up")
-
+        self.time -= 1
+        if self.time <= 0:
+            self.end_round("Time is up")
 
     def guess(self, player, word):
         """
@@ -86,4 +86,4 @@ class Round(object):
             self.end_round("Drawing player leaves")
 
     def end_round(self, msg):
-        pass
+        self.game.end_round()
