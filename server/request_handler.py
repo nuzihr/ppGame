@@ -5,12 +5,15 @@ Handles all of the connections, creating new games and requests from the client(
 
 import socket
 import threading
-from .player import Player
-from .game import Game
+from player import Player
+from game import Game
 import json
 
 
 class Server(object):
+    MIN_PLAYERS = 3
+    MAX_PLAYERS = 8
+
     def __init__(self):
         self.connection_queue = []
         self.game_id = 0
@@ -19,8 +22,7 @@ class Server(object):
         """
         handles in game communication between clients
         :param conn: connection object
-        :param ip: str
-        :param name: str
+        :param player:
         :return: None
         """
         while True:
@@ -28,25 +30,54 @@ class Server(object):
                 data = conn.recv(1024)
                 data = json.loads(data)
 
-                keys = [keys for key in data.keys()]
+                keys = [key for key in data.keys()]
                 send_msg = {key: [] for key in keys}
 
                 for key in keys:
-                    if key == -1:
-                    elif key == 0:
-                    elif key == 1:
-                    elif key == 2:
-                    elif key == 3:
-                    elif key == 4:
-                    elif key == 5:
-                    elif key == 6:
-                    elif key == 7:
-                    elif key == 8:
-                    elif key == 9:
+                    if key == -1:  # get game, return a list of players
+                        if player.game:
+                            send_msg[-1] = player.game.players
+                        else:
+                            send_msg[-1] = []
+
+                    if player.game:
+                        if key == 0:  # guess
+                            correct = player.game.player_guess(player, data[0][0])
+                            send_msg[0] = correct
+                        elif key == 1:  # skip
+                            skip = player.game.skip()
+                            send_msg[1] = skip
+                        elif key == 2:  # get chat
+                            content = player.game.round.chat.get_chat()
+                            send_msg[2] = content
+                        elif key == 3:  # get board
+                            board = player.game.board.get_board()
+                            send_msg[3] = board
+                        elif key == 4:  # get score
+                            scores = player.game.get_player_scores()
+                            send_msg[4] = scores
+                        elif key == 5:  # get round
+                            round = player.game.round_count
+                            send_msg[5] = round
+                        elif key == 6:  # get word
+                            word = player.game.get_word()
+                            send_msg[6] = word
+                        elif key == 7:  # get skips
+                            skips = player.game.round.skips
+                            send_msg[7] = skips
+                        elif key == 8:  # update board
+                            x, y, color = data[8][:3]
+                            player.game.update_board(x, y, color)
+                        elif key == 9:  # get round time
+                            t = player.game.round.time
+                            send_msg[9] = t
+                        else:
+                            raise Exception("Not a valid request")
 
                 conn.sendall(json.dumps(send_msg))
             except Exception() as e:
-                print(f"[Exception] {player.name} disconnected: ", e)
+                print(f"[Exception] {player.get_name()} disconnected: ", e)
+                conn.close()
 
     def handle_queue(self, player):
         """
@@ -56,14 +87,13 @@ class Server(object):
         """
         self.connection_queue.append(player)
 
-        if len(self.connection_queue) >= 3:
+        if len(self.connection_queue) >= self.MIN_PLAYERS:
             game = Game(self.game_id, self.connection_queue[:])
             self.game_id += 1
 
             for p in self.connection_queue:
                 p.set_game(game)
             self.connection_queue = []
-
 
     def authentication(self, conn, addr):
         """
@@ -89,18 +119,18 @@ class Server(object):
         server = ""
         port = 5555
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         try:
-            s.bind((server, port))
+            svr.bind((server, port))
         except socket.error as e:
             str(e)
 
-        s.listen()
-        print("Waiting for a connectio, Server Started")
+        svr.listen()
+        print("Waiting for a connection, Server Started")
 
         while True:
-            conn, addr = s.accept()
+            conn, addr = svr.accept()
             print("[CONNECT] New Connection")
             self.authentication(conn, addr)
 

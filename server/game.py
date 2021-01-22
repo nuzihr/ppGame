@@ -18,6 +18,7 @@ class Game(object):
         self.round = None
         self.board = Board()
         self.player_draw_ind = 0
+        self.round_count = 1
         self.start_new_round()
 
     def start_new_round(self):
@@ -27,6 +28,7 @@ class Game(object):
         """
         self.round = Round(self.get_word(), self.players[self.player_draw_ind], self.players, self)
         self.player_draw_ind += 1
+        self.round_count += 1
 
         if self.player_draw_ind >= len(self.players):
             self.end_round()
@@ -58,6 +60,13 @@ class Game(object):
 
         if len(self.players) <= 2:
             self.end_game()
+
+    def get_player_scores(self):
+        """
+        give a dict of player socres.
+        :return: dict
+        """
+        scores = {player: player.get_score() for player in self.players}
 
     def skip(self):
         """
