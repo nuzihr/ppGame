@@ -5,7 +5,7 @@ from .chat import Chat
 
 class Round(object):
 
-    def __init__(self, word, player_drawing, players):
+    def __init__(self, word, player_drawing, players, game):
         """
         init object
         :param word: str
@@ -21,6 +21,32 @@ class Round(object):
         self.chat = Chat(self)
         start_new_thread(self.time_thread, ())
 
+    def skip(self):
+        """
+        Returns true if round
+        :return:
+        """
+        self.skips += 1
+        if self.skips > len(self.player_guessed) - 1:
+            return True
+        return False
+
+    def get_scores(self):
+        """
+        :return: returns all the player scores
+        """
+        return self.scores
+
+    def get_score(self, player):
+        """
+        gets a specific players scores
+        :param player:
+        :return: int
+        """
+        if player in self.player_scores:
+            return self.player_scores[player]
+        else:
+            raise Exception("Player not in score list")
 
     def time_thread(self):
         """
