@@ -76,7 +76,7 @@ class Server(object):
 
                 conn.sendall(json.dumps(send_msg))
             except Exception() as e:
-                print(f"[Exception] {player.get_name()} disconnected: ", e)
+                print("[Exception] {} disconnected: {}".format(player.get_name(), e))
                 conn.close()
 
     def handle_queue(self, player):
@@ -110,13 +110,14 @@ class Server(object):
             conn.sendall("1".encode())
             player = Player(addr, name)
             self.handle_queue(player)
-            threading.Thread(target=self.player_thread, args=(conn, player))
+            thread = threading.Thread(target=self.player_thread, args=(conn, player))
+            thread.start()
         except Exception as e:
             print("[EXCEPTION]", e)
             conn.close()
 
     def connection_thread(self):
-        server = ""
+        server = "localhost"
         port = 5555
 
         svr = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -137,4 +138,5 @@ class Server(object):
 
 if __name__ == "__main__":
     s = Server()
-    threading.Thread(target=s.connection_thread)
+    thread = threading.Thread(target=s.connection_thread)
+    thread.start()

@@ -1,7 +1,6 @@
-import time as t
 from _thread import *
-from .game import Game
-from .chat import Chat
+from chat import Chat
+
 
 class Round(object):
 
@@ -64,9 +63,9 @@ class Round(object):
         :returns bool if player got guess correct answer
         :param player: Player
         :param word: str
-        :return　bool
+        :return bool
         """
-        correct = word == self.word
+        correct = (word == self.word)
         if correct:
             self.player_guessed.append(player)
 
