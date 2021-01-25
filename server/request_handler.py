@@ -27,57 +27,70 @@ class Server(object):
         """
         while True:
             try:
-                data = conn.recv(1024)
-                data = json.loads(data)
+                try:
+                    data = conn.recv(1024)
+                    data = json.loads(data.decode())
+                except Exception as e:
+                    break
 
+                print("[LOG] receive {}".format(data))
+                if not player.game:
+                    conn.send("-1".encode())
+
+                send_msg = {}
                 keys = [key for key in data.keys()]
-                send_msg = {key: [] for key in keys}
-
                 for key in keys:
-                    if key == -1:  # get game, return a list of players
-                        if player.game:
-                            send_msg[-1] = player.game.players
-                        else:
-                            send_msg[-1] = []
+                    if key == "-1":  # get game, return a list of players
+                        send = {player.get_name(): player.get_score() for player in player.game.players}
+                        send_msg[key] = send
+                    elif key == "0":  # guess
+                        correct = player.game.player_guess(player, data[key])
+                        send_msg[key] = correct
+                    elif key == "1":  # skip
+                        skip = player.game.skip(player)
+                        send_msg[key] = skip
+                    elif key == "2":  # get chat
+                        content = player.game.round.chat.get_chat()
+                        send_msg[key] = content
+                    elif key == "3":  # get board
+                        board = player.game.board.get_board()
+                        send_msg[key] = board
+                    elif key == "4":  # get score
+                        scores = player.game.get_player_scores()
+                        send_msg[key] = scores
+                    elif key == "5":  # get round
+                        round = player.game.round_count
+                        send_msg[key] = round
+                    elif key == "6":  # get word
+                        word = player.game.get_word()
+                        send_msg[key] = word
+                    elif key == "7":  # get skips
+                        skips = player.game.round.get_skips()
+                        send_msg[key] = skips
+                    elif key == "8":  # update board
+                        x, y, color = data[key][:3]
+                        player.game.update_board(x, y, color)
+                    elif key == "9":  # get round time
+                        t = player.game.round.time
+                        send_msg[key] = t
+                    else:
+                        conn.send("-1".encode())
+                        raise Exception("Not a valid request")
 
-                    if player.game:
-                        if key == 0:  # guess
-                            correct = player.game.player_guess(player, data[0][0])
-                            send_msg[0] = correct
-                        elif key == 1:  # skip
-                            skip = player.game.skip()
-                            send_msg[1] = skip
-                        elif key == 2:  # get chat
-                            content = player.game.round.chat.get_chat()
-                            send_msg[2] = content
-                        elif key == 3:  # get board
-                            board = player.game.board.get_board()
-                            send_msg[3] = board
-                        elif key == 4:  # get score
-                            scores = player.game.get_player_scores()
-                            send_msg[4] = scores
-                        elif key == 5:  # get round
-                            round = player.game.round_count
-                            send_msg[5] = round
-                        elif key == 6:  # get word
-                            word = player.game.get_word()
-                            send_msg[6] = word
-                        elif key == 7:  # get skips
-                            skips = player.game.round.skips
-                            send_msg[7] = skips
-                        elif key == 8:  # update board
-                            x, y, color = data[8][:3]
-                            player.game.update_board(x, y, color)
-                        elif key == 9:  # get round time
-                            t = player.game.round.time
-                            send_msg[9] = t
-                        else:
-                            raise Exception("Not a valid request")
+                conn.send(json.dumps(send_msg).encode())
+            except Exception as e:
+                print("[Exception] {} {}".format(player.get_name(), e))
+                break
 
-                conn.sendall(json.dumps(send_msg))
-            except Exception() as e:
-                print("[Exception] {} disconnected: {}".format(player.get_name(), e))
-                conn.close()
+        if player.game:
+            player.game.player_disconnected(player)
+
+        if player in self.connection_queue:
+            self.connection_queue.remove(player)
+
+        print("[DISCONNECT] {} disconnected".format(player.get_name()))
+        conn.close()
+
 
     def handle_queue(self, player):
         """
@@ -104,14 +117,14 @@ class Server(object):
         """
         try:
             data = conn.recv(16)
-            name = str(data.decode())
+            name = data.decode()
             if not name:
                 raise Exception("No name received")
-            conn.sendall("1".encode())
+            conn.send("1".encode())
             player = Player(addr, name)
             self.handle_queue(player)
-            thread = threading.Thread(target=self.player_thread, args=(conn, player))
-            thread.start()
+            player_thread = threading.Thread(target=self.player_thread, args=(conn, player))
+            player_thread.start()
         except Exception as e:
             print("[EXCEPTION]", e)
             conn.close()
@@ -127,7 +140,7 @@ class Server(object):
         except socket.error as e:
             str(e)
 
-        svr.listen()
+        svr.listen(1)
         print("Waiting for a connection, Server Started")
 
         while True:

@@ -1,3 +1,6 @@
+from game import Game
+
+
 class Player(object):
 
     def __init__(self, ip, name):
@@ -6,10 +9,11 @@ class Player(object):
         :param ip: str
         :param name: str
         """
-        self.game = None
         self.ip = ip
         self.name = name
         self.score = 0
+        # self.game = None
+        self.game = Game("1", [self, self])
 
     def get_ip(self):
         return self.ip

@@ -1,42 +1,49 @@
 from _thread import *
+import time as t
 from chat import Chat
 
 
 class Round(object):
 
-    def __init__(self, word, player_drawing, players, game):
+    def __init__(self, word, player_drawing, game):
         """
         init object
         :param game: Game
         :param word: str
         :param player_drawing: Player
-        :param players: Player[]
         """
         self.game = game
         self.word = word
         self.player_drawing = player_drawing
-        self.player_scores = {player: 0 for player in players}
+        self.player_scores = {player.get_name(): 0 for player in self.game.players}
         self.player_guessed = []
-        self.skips = 0
+        self.player_skipped = []
         self.time = 60
         self.chat = Chat(self)
         start_new_thread(self.time_thread, ())
 
-    def skip(self):
+    def skip(self, player):
         """
-        Returns true if round
-        :return:
+        Returns true if all player skip
+        :return: bool
         """
-        self.skips += 1
-        if self.skips > len(self.player_guessed) - 1:
+        if player not in self.player_skipped:
+            self.chat.update_chat("{} votes to skip ({})".format(player.get_name(), len(self.player_skipped)))
+            self.player_skipped.append(player)
+
+        if len(self.player_skipped) == len(self.game.players) - 1:
+            self.chat.update_chat("Round has been skipped.")
             return True
         return False
+
+    def get_skips(self):
+        return len(self.player_skipped)
 
     def get_scores(self):
         """
         :return: returns all the player scores
         """
-        return self.scores
+        return self.player_scores
 
     def get_score(self, player):
         """
@@ -44,8 +51,9 @@ class Round(object):
         :param player:
         :return: int
         """
-        if player in self.player_scores:
-            return self.player_scores[player]
+        name = player.get_name()
+        if name in self.player_scores:
+            return self.player_scores[name]
         else:
             raise Exception("Player not in score list")
 
@@ -54,9 +62,10 @@ class Round(object):
         Run in thread to keep track of time
         :return: None
         """
-        self.time -= 1
-        if self.time <= 0:
-            self.end_round("Time is up")
+        while self.time > 0:
+            t.sleep(1)
+            self.time -= 1
+        self.end_round("Time is up")
 
     def guess(self, player, word):
         """
@@ -65,9 +74,12 @@ class Round(object):
         :param word: str
         :return bool
         """
-        correct = (word == self.word)
-        if correct:
+        if word == self.word:
             self.player_guessed.append(player)
+            return True
+
+        self.chat.update_chat("{} guessed {}".format(player.get_name(), word))
+        return False
 
     def player_left(self, player):
         """
@@ -75,17 +87,24 @@ class Round(object):
         :param player: Player
         :return: None
         """
-        if player in self.player_scores:
-            del self.player_scores[player]
+        name = player.get_name()
+        if name in self.player_scores:
+            del self.player_scores[name]
 
         if player in self.player_guessed:
             self.player_guessed.remove(player)
 
+        if player in self.player_skipped:
+            self.player_skipped.remove(player)
+
         if player == self.player_drawing:
             self.end_round("Drawing player leaves")
 
-    def end_round(self, msg):
+        print("{} disconnected.".format(player.get_name()))
 
-        for player in self.players:
-            player.update_score(self.player_scores[player])
+    def end_round(self, msg):
+        for player in self.game.players:
+            name = player.get_name()
+            if name in self.player_scores:
+                player.add_score(self.player_scores[name])
         self.game.end_round()

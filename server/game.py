@@ -1,4 +1,3 @@
-
 from board import Board
 from round import Round
 import random
@@ -18,7 +17,7 @@ class Game(object):
         self.round = None
         self.board = Board()
         self.player_draw_ind = 0
-        self.round_count = 1
+        self.round_count = 0
         self.start_new_round()
 
     def start_new_round(self):
@@ -26,13 +25,14 @@ class Game(object):
         Starts a new round with a new word
         :return: None
         """
-        self.round = Round(self.get_word(), self.players[self.player_draw_ind], self.players, self)
-        self.player_draw_ind += 1
-        self.round_count += 1
+        self.round = Round(self.get_word(), self.players[self.player_draw_ind], self)
 
-        if self.player_draw_ind >= len(self.players):
-            self.end_round()
-            self.end_game()
+        # if self.player_draw_ind >= len(self.players):
+        #     self.end_round()
+        #     self.end_game()
+
+        self.round_count += 1
+        self.player_draw_ind += 1
 
     def player_guess(self, player, guess):
         """
@@ -66,18 +66,19 @@ class Game(object):
         give a dict of player socres.
         :return: dict
         """
-        scores = {player: player.get_score() for player in self.players}
+        return {player.get_name(): player.get_score() for player in self.players}
 
-    def skip(self):
+    def skip(self, player):
         """
         Increments the round skips, if skips are greater than threshold, starts new round.
         :return: None
         """
         if self.round:
-            new_round = self.round.skip()
+            new_round = self.round.skip(player)
             if new_round:
                 self.end_round()
-            pass
+                return True
+            return False
         else:
             raise Exception("No round started yet.")
         pass
@@ -99,8 +100,11 @@ class Game(object):
         If the round ends call this
         :return: None
         """
-        self.start_new_round()
-        self.board.clear()
+        if len(self.players) > 1:
+            self.start_new_round()
+            self.board.clear()
+        else:
+            self.end_game()
 
     def end_game(self):
         """
@@ -108,14 +112,14 @@ class Game(object):
         :return:
         """
         for player in self.players:
-            self.round.player_left(player)
+            player.game = None
 
     def get_word(self):
         """
         gives a word that has not yet been used
         :return: str
         """
-        with open("words.txt", "r") as f:
+        with open("./server/words.txt", "r") as f:
             words = []
             for line in f:
                 word = line.strip()
