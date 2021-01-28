@@ -11,7 +11,7 @@ class Board(object):
         self.board = self.create_board()
 
     def create_board(self):
-        return [[(255, 255, 0) for _ in range(self.COLS)] for _ in range(self.ROWS)]
+        return [[(255, 255, 255) for _ in range(self.COLS)] for _ in range(self.ROWS)]
 
     def draw(self, win):
         for y, _ in enumerate(self.board):
